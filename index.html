@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Annotation</title>
+    <style>
+        /* Global Styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* Container for content */
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 80%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #007bff;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        /* File input style */
+        input[type="file"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            background-color: #f8f9fa;
+        }
+
+        input[type="file"]:hover {
+            background-color: #e2e6ea;
+        }
+
+        /* Canvas Styles */
+        #canvas {
+            max-width: 100%;
+            margin-top: 20px;
+            border: 2px solid #ddd;
+            background-color: #f0f2f5;
+        }
+
+        /* Button Styles */
+        button {
+            padding: 12px 24px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        /* Annotation text style */
+        .annotation-label {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+            background-color: rgba(255, 87, 34, 0.8);
+            padding: 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Upload an Image for Annotation</h1>
+    <input type="file" id="imageInput" accept="image/*">
+    <br>
+    <canvas id="canvas"></canvas>
+    <br>
+    <button onclick="annotateImage()">Annotate Image</button>
+</div>
+
+<script>
+    // Elements
+    const imageInput = document.getElementById("imageInput");
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
+
+    // Image input event listener
+    imageInput.addEventListener("change", (e) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                context.drawImage(img, 0, 0);
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(e.target.files[0]);
+    });
+
+    // Annotate image with AI model
+    function annotateImage() {
+        const imageData = canvas.toDataURL(); // Convert canvas to image data (base64)
+
+        // Send image data to AI model for annotation (replace with your AI API)
+        fetch('https://your-ai-api-endpoint.com/annotate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ image: imageData })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data); // Process the AI response
+
+            // Example: Drawing bounding boxes or labels on the canvas
+            data.annotations.forEach((annotation) => {
+                context.beginPath();
+                context.rect(annotation.x, annotation.y, annotation.width, annotation.height);
+                context.strokeStyle = "#FF5733";  // Red-Orange bounding box color
+                context.lineWidth = 3;
+                context.stroke();
+                context.font = "16px Arial";
+                context.fillStyle = "#FF5733";  // Red-Orange color for label
+                context.fillText(annotation.label, annotation.x + 5, annotation.y - 10);
+            });
+        })
+        .catch(error => {
+            console.error("Error annotating image:", error);
+        });
+    }
+
+    // Google Vision API integration (for AI image annotation)
+    function callGoogleVisionAPI(imageBase64) {
+        const apiKey = 'YOUR_GOOGLE_CLOUD_API_KEY';
+        const endpoint = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`;
+
+        const requestPayload = {
+            requests: [
+                {
+                    image: {
+                        content: imageBase64.split(',')[1]  // Remove 'data:image/png;base64,' part
+                    },
+                    features: [
+                        {
+                            type: 'LABEL_DETECTION',
+                            maxResults: 10
+                        },
+                        {
+                            type: 'OBJECT_LOCALIZATION',
+                            maxResults: 10
+                        }
+                    ]
+                }
+            ]
+        };
+
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestPayload),
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            // Process data to add labels or bounding boxes to the canvas
+        })
+        .catch(error => console.error('Error with Google Vision API:', error));
+    }
+</script>
+
+</body>
+</html>
